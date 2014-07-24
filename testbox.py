@@ -1,28 +1,49 @@
 import os
-import re
 import sys
+import string
 
-BASE_FILE_NAME = os.path.join(os.dirname(__file__), 'base.html')
-EXTEND_REGEXP = re.compile(r'{%\s*extend\s+(?P<quote>["\']?)(?P<filename>[-a-zA-Z0-9_.]+)(?(quote)(?P=quote)|\s*)\s*%}')
-BLOCK_REGEXP = re.complie(r'{%\s*block\s+(?P<blockname>[-a-zA-Z0-9_.]+)\s*}(?P<subcontent>.*){%\s*endblock\s*}', re.DOTALL)
+from config import *
+from utils import get_extend_tree, find_all_blocks
 
-def find_all_blocks(content):
-    blocks = []
-    for block in BLOCK_REGEXP.finditer(content):
-        blocks.append(block.groupdict()['blockname'])
-        blocks.extend(find_all_blocks(block.groupdict()['subcontent']))
-    return blocks
 
-def find_all_extends(content):
-    extends = []
-    for extend in EXTEND_REGEXP.finditer(content):
-        extends.append(extend.groupdict()['filename'])
-    return extends
+def help():
+    t = string.Template('''
+    Usage:
+        python ${main} ${options} ${args}
+    ''')
+    
+    helptext = t.substitute({'main': 'testbox.py',
+                             'options': '',
+                             'args': '[file...]'
+    })
+    
+    arg = sys.argv[1]
+    if not os.path.isfile(arg):
+        return helptext
 
 def main():
-    with open(BASE_FILE_NAME, 'r') as f:
-        content = ''.join(f.readlines())
-        place_holder_blocks = find_all_blocks(content)
+    helptext = help()
+    if helptext:
+        print(helptext)
+        return
+    
+    with open(BASE_FILE, 'r') as f:
+        base_content = ''.join(f.readlines())
+        base_blocks = find_all_blocks(base_content)
+    
+    for input_file in sys.argv[1:]:
+        if not os.path.isfile(input_file):
+            print('')
+            print('------> File *%s* does not exist!!!' % input_file)
+        else:
+            generated_file = os.path.join(os.path.dirname(input_file), os.path.basename(input_file)+'.gen.html')
+            print('')
+            print('------> File *%s* will be generated from %s ...' % (generated_file, input_file))
+        
+        extend_tree = get_extend_tree(input_file, BASE_FILE)
+        print(extend_tree)
+        
+        
 
 if __name__ == '__main__':
     main()
