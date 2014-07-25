@@ -17,15 +17,30 @@ regexp['extend'] = re.compile(
 
 regexp['block'] = re.compile(
     r'''
-    {%\s*                               # block start-left delimiter
+    (?P<blockstart>{%\s*                # block start-left delimiter
     block\s+                            # block start identifier
     (?P<blockname>[-a-zA-Z0-9_.]+)      # block name
-    \s*%}                               # block start-right delimiter
+    \s*%})                              # block start-right delimiter
     
-    (?P<subcontent>.*)                  # block content
+    (?P<subcontent>.*?)                  # block content
     
-    {%\s*                               # block end-left delimiter
+    (?P<blockend>{%\s*                  # block end-left delimiter
     endblock                            # block end identifier
-    \s*%}                               # block end-right delimiter
+    \s*%})                              # block end-right delimiter
     ''', 
+    re.IGNORECASE | re.UNICODE | re.DOTALL | re.VERBOSE)
+
+regexp['blocklimiter'] = re.compile(
+    r'''
+    (
+    (?P<blockstart>{%\s*                # block start-left delimiter
+    block\s+                            # block start identifier
+    (?P<blockname>[-a-zA-Z0-9_.]+)      # block name
+    \s*%})                              # block start-right delimiter
+    |
+    (?P<blockend>{%\s*                  # block end-left delimiter
+    endblock                            # block end identifier
+    \s*%})
+    )
+    ''',
     re.IGNORECASE | re.UNICODE | re.DOTALL | re.VERBOSE)
