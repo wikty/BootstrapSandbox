@@ -2,6 +2,7 @@
 This project was born, when i working with [bootstrap](http://getbootstrap.com) framework. Assume that you need add a new bootstrap component into your project, before that usual you should modify the component suitable for your project sytle, if you directly do this in your project, may mess up other parts. You shoud have a clean workspace to debug the new component, and then merge it into your project. Yeah, this project's goal is providing a clean workspace for that situation.
 
 ##Usage##
+First, you should configure your workspace path, modify the `WORKING_DIR` ( in file `config.py`) point to your workspace directory
 
 Generate bootstrap testing file
 
