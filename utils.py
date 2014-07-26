@@ -6,16 +6,15 @@ from config import *
 from metanode import FileMetaNode, BlockMetaNode, ContentMetaNode
 
 # may be should imporve to support multiple extends
-def _find_extend(content):
-    extend = regexp['extend'].search(content)
-    if not extend:
-        return
-    extend = {
-        'filename': extend.groupdict()['filename'],
-        'start': extend.start(),
-        'end': extend.end()
-    }
-    return extend
+def _find_all_extends(content):
+    extends = []
+    for extend in regexp['extend'].finditer(content):
+        extends.append({
+            'filename': extend.groupdict()['filename'],
+            'start': extend.start(),
+            'end': extend.end()
+        })
+    return extends
 
 def _recursive_match(delimiter_regexp, content, start_delimiter, end_delimiter=''):
     results = []
