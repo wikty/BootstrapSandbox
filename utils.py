@@ -5,6 +5,7 @@ from placeholder import regexp
 from config import *
 from metanode import FileMetaNode, BlockMetaNode, ContentMetaNode
 
+# may be should imporve to support multiple extends
 def _find_extend(content):
     extend = regexp['extend'].search(content)
     if not extend:
@@ -16,11 +17,11 @@ def _find_extend(content):
     }
     return extend
 
-def recursive_match(delimiter_regexp, content, start_delimiter, end_delimiter):
+def _recursive_match(delimiter_regexp, content, start_delimiter, end_delimiter=''):
     results = []
     block_list = None
     for block in delimiter_regexp.finditer(content):
-        if start_delimiter in block.groupdict().keys():
+        if block.groupdict()[start_delimiter]:
             if block_list is None:
                 block_list = []
             block_list.append(block)
@@ -36,20 +37,14 @@ def recursive_match(delimiter_regexp, content, start_delimiter, end_delimiter):
                     'content_start': blockstart.end(),
                     'content_end': block.start()
                 })
-                
+    return results
+
 def find_all_blocks(content, base=0):
-    blocks = []
-    for block in regexp['block'].finditer(content):
-        blocks.append({
-            'block': block.groupdict()['blockname'],
-            'start': block.start()+base,
-            'end': block.end(),
-            'content_start': block.start()+len(block.groupdict()['blockstart']),
-            'content_end': block.end()-len(block.groupdict()['blockend'])
-        })
-        base = block.start() + len(block.groupdict()['blockstart'])
-        blocks.extend(find_all_blocks(block.groupdict()['subcontent'], base))
-    return blocks
+    def sorted_key(item):
+        return item['start']
+    
+    blocks = _recursive_match(regexp['blockdelimiter'], content, 'blockstart')
+    return sorted(blocks, key=sorted_key)
 
 def get_extend_dict(current_file, terminal_file):
     current_file = os.path.abspath(current_file)
@@ -91,7 +86,7 @@ def get_extend_dict(current_file, terminal_file):
                 'filename': extend_file
             },
             'blocks': blocks,
-            'content': content
+            #'content': content
         }
         current = extend_file
         if current in extend_dict.keys():
@@ -102,7 +97,7 @@ def get_extend_dict(current_file, terminal_file):
             extend_dict[terminal_file] = {
                 'extend': None,
                 'blocks': term_blocks,
-                'content': term_content
+                #'content': term_content
             }
             return extend_dict
 
