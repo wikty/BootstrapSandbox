@@ -30,7 +30,7 @@ regexp['block'] = re.compile(
     ''', 
     re.IGNORECASE | re.UNICODE | re.DOTALL | re.VERBOSE)
 
-regexp['blocklimiter'] = re.compile(
+regexp['blockdelimiter'] = re.compile(
     r'''
     (
     (?P<blockstart>{%\s*                # block start-left delimiter

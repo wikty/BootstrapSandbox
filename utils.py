@@ -6,7 +6,7 @@ from config import *
 from metanode import FileMetaNode, BlockMetaNode, ContentMetaNode
 
 # may be should imporve to support multiple extends
-def _find_all_extends(content):
+def _find_extend(content):
     extends = []
     for extend in regexp['extend'].finditer(content):
         extends.append({
@@ -14,7 +14,7 @@ def _find_all_extends(content):
             'start': extend.start(),
             'end': extend.end()
         })
-    return extends
+    return extends[0]
 
 def _recursive_match(delimiter_regexp, content, start_delimiter, end_delimiter=''):
     results = []
@@ -61,7 +61,6 @@ def get_extend_dict(current_file, terminal_file):
     with open(terminal_file, 'r') as f:
         term_content = ''.join(f.readlines())
     term_blocks = find_all_blocks(term_content)
-    
     while True:
         with open(current, 'r') as f:
             content = ''.join(f.readlines())
@@ -85,7 +84,7 @@ def get_extend_dict(current_file, terminal_file):
                 'filename': extend_file
             },
             'blocks': blocks,
-            #'content': content
+            'content': content
         }
         current = extend_file
         if current in extend_dict.keys():
@@ -96,37 +95,42 @@ def get_extend_dict(current_file, terminal_file):
             extend_dict[terminal_file] = {
                 'extend': None,
                 'blocks': term_blocks,
-                #'content': term_content
+                'content': term_content
             }
             return extend_dict
 
 def _convert_dict_to_tree(extend_dict):
+    # Construct Root File Node
+    file_data = extend_dict.popitem()
+    if file_data[1]['extend'] is not None:
+        raise Exception('Root File should not include extend')
+    rootnode = FileMetaNode(file_data[0], True)
+    blocknodes = [BlockMetaNode(**block) for block in file_data[1]['blocks']]
+    first_blocknode = min(blocknodes)
+    rootnode.add_block_tree(blocknodes, file_data[1]['content'])
+    rootnode.add_content(
+        ContentMetaNode(
+            content=file_data[1]['content'][0:first_blocknode.start],
+            start=0,
+            end=first_blocknode.start
+        )
+    )
+    rootnode.add_content(
+        ContentMetaNode(
+            content=file_data[1]['content'][first_blocknode.end:],
+            start=first_blocknode.end,
+            end=len(file_data[1]['content'])
+        )
+    )
+    previous_filenode = rootnode
+    # Construct subsequent Nodes
     while extend_dict:
         file_data = extend_dict.popitem()
-        content = file_data[1]['content']
-        extend = file_data[1]['extend']
-        blocks = file_data[1]['blocks']
-        
-        root_file_flag = True if extend is None else False
-        filenode = FileMetaNode(file_data[0], root_file_flag)
-        
-        blocknodes = []
-        for block in blocks:
-            blocknode = BlockMetaNode(**block)
-            blocknodes.append(blocknode)
-        
-        first_blocknode = min(blocknodes)
-        filenode.add_block(first_blocknode)
-        
-        for blocknode in sorted(blocknodes):
-            if first_blocknode.issiblings(blocknode):
-                filenode.add_block(blocknode)
-        
-        
-        
-        if root_file_flag:
-            prepend_contentnode = ContentMetaNode(content=content[0:first_blocknode.start], start=0, end=first_blocknode.start)
-            append_contentnode = ContentMetaNode(content=content[first_blocknode.end:], start=first_blocknode.end, end=len(content))
-            filenode.add_content(prepend_content)
-            filenode.add_content(append_content)    
-    
+        filenode = FileMetaNode(file_data[0])
+        blocknodes = [BlockMetaNode(**block) for block in file_data[1]['blocks']]
+        filenode.add_block_tree(blocknodes, file_data[1]['content'])  
+        if previous_filenode:
+            previous_filenode.set_child(filenode)
+        previous_filenode = filenode
+   
+    return rootnode
