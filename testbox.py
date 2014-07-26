@@ -1,6 +1,7 @@
 import os
 import sys
 import string
+from pprint import pprint
 
 from config import *
 from utils import get_extend_dict, find_all_blocks, _convert_dict_to_tree
@@ -43,7 +44,7 @@ def main():
             print('------> File *%s* will be generated from *%s*...' % (generated_file, input_file))
         
         extend_tree = get_extend_dict(input_file, BASE_FILE)
-        print(_convert_dict_to_tree(extend_tree))
+        pprint(_convert_dict_to_tree(extend_tree))
         
         
 

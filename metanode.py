@@ -5,7 +5,12 @@ class ContentMetaNode(object):
         self.content = content
         self.start = start
         self.end = end
-
+    
+    def __str__(self):
+        return self.content
+    
+    def __repr__(self):
+        return self.content
 
 #b1 = metanode.BlockMetaNode('b1', 40, 500, 50, 400)
 #b2 = metanode.BlockMetaNode('b2', 51, 399, 100, 300)
@@ -26,6 +31,9 @@ class BlockMetaNode(object):
         self.item_list = []
     
     def __str__(self):
+        return self.name
+    
+    def __repr__(self):
         return self.name
     
     def __gt__(self, other):
@@ -83,6 +91,15 @@ class FileMetaNode(object):
         self.root = root
         self.namespace = []
 
+    def __repr__(self):
+        return repr({'name': self.name,
+                'namespace': self.namespace,
+                'child': self.child
+        })
+    
+    def __str__(self):
+        return self.name
+    
     def add_block(self, block):
         if isinstance(block, BlockMetaNode):
             self.item_list.append(block)
@@ -108,10 +125,10 @@ class FileMetaNode(object):
         block_list.remove(first_blocknode)
         parent_node = first_blocknode
         trace_parent_node.append(parent_node)
-        #print(block_list)
-        for block in sorted(block_list):
-            #print(block)
+        for block in sorted(block_list):        
             if block in parent_node:
+#                print(block.name, 'in')
+#                print([b.name for b in trace_parent_node])
                 if parent_node.content_start != block.start:
                     parent_node.add_item(ContentMetaNode(**{
                         'content': content[parent_node.content_start:block.start],
@@ -123,41 +140,41 @@ class FileMetaNode(object):
                 parent_node = block
                 trace_parent_node.append(parent_node)
             else:
+#                print(block.name, ' not in')
 #                print([b.name for b in trace_parent_node])
-                print(block)
                 while True:
                     last_parent = trace_parent_node.pop()
                     last_parent_parent = trace_parent_node[-1]
-#                    print(last_parent_parent)
-                    
-                    if last_parent.content_start != last_parent.content_end:
-                        last_parent.add_item(ContentMetaNode(**{
-                            'content': content[last_parent.content_start:last_parent.content_end],
-                            'start': last_parent.content_start,
-                            'end': last_parent.content_end
-                        }))
-                    
-                    last_parent_parent.add_item(last_parent)
-                    
-                    if last_parent.end != last_parent_parent.content_end:
-                        last_parent_parent.add_item(ContentMetaNode(**{
-                            'content': content[last_parent.end:last_parent_parent.content_end],
-                            'start': last_parent.end,
-                            'end': last_parent_parent.content_end
-                        }))
-
-                    if block.issibling(last_parent_parent):
+                    if not block.issibling(first_blocknode) and block not in last_parent_parent:
+                        if last_parent.content_start != last_parent.content_end:
+                            last_parent.add_item(ContentMetaNode(**{
+                                'content': content[last_parent.content_start:last_parent.content_end],
+                                'start': last_parent.content_start,
+                                'end': last_parent.content_end
+                            }))
+                        
+                        last_parent_parent.add_item(last_parent)
+                        
+                        if last_parent.end != last_parent_parent.content_end:
+                            last_parent_parent.add_item(ContentMetaNode(**{
+                                'content': content[last_parent.end:last_parent_parent.content_end],
+                                'start': last_parent.end,
+                                'end': last_parent_parent.content_end
+                            }))
+                    elif block.issibling(first_blocknode):
+                        # toplevel content(not included any block) will be ignored
+                        parent_node = block
+                        trace_parent_node.append(parent_node)
+                        break
+                    elif block in last_parent_parent:
                         if last_parent.end != block.start:
-                            # toplevel content(not included any block) will be ignored
-                            if not block.issibling(first_blocknode):
-                                trace_parent_node.pop()
-                                trace_parent_node[-1].add_item(ContentMetaNode(**{
-                                    'content': content[last_parent.end:block.start],
-                                    'start': last_parent.end,
-                                    'end': block.start
-                                }))
-                        parend_node = block
-                        trace_parent_node.append(parend_node)
+                            last_parent_parent.add_item(ContentMetaNode(**{
+                                'content': content[last_parent.end:block.start],
+                                'start': last_parent.end,
+                                'end': block.start
+                            }))
+                        parent_node = block
+                        trace_parent_node.append(parent_node)
                         break
         
         return [block for block in block_list if first_blocknode.issibling(block)]
