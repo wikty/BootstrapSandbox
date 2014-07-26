@@ -128,9 +128,35 @@ def _convert_dict_to_tree(extend_dict):
         file_data = extend_dict.popitem()
         filenode = FileMetaNode(file_data[0])
         blocknodes = [BlockMetaNode(**block) for block in file_data[1]['blocks']]
-        filenode.add_block_tree(blocknodes, file_data[1]['content'])  
+        filenode.add_block_tree(blocknodes, file_data[1]['content'])
+#        if filenode.name == '/home/wikty/Projects/bootstrapbox/examples/page_header.html':
+#            print(filenode.item_list[0].start)
+#            print(filenode.item_list[0].content_start)
+#            print(filenode.item_list[0].content_end)
+#            print(filenode.item_list[0].end)
         if previous_filenode:
             previous_filenode.set_child(filenode)
         previous_filenode = filenode
    
     return rootnode
+
+def linearize(rootnode):
+    content = []
+    filenode = rootnode
+    while filenode:
+        print(filenode.name)
+        for item in sorted(filenode.item_list):
+            if isinstance(item, ContentMetaNode):
+                print('content')
+                content.append(item.content)
+            if isinstance(item, BlockMetaNode):
+                print('blockname: ' + item.name)
+                childnode = filenode.search_block(item.name)
+                if not childnode:
+                    #print(item.collect_content())
+                    content.append(item.collect_content())
+                else:
+                    #print(childnode.name)
+                    content.append(linearize(childnode))
+        filenode = filenode.child
+    return ''.join(content)

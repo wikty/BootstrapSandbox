@@ -1,10 +1,9 @@
 import os
 import sys
 import string
-from pprint import pprint
 
 from config import *
-from utils import get_extend_dict, find_all_blocks, _convert_dict_to_tree
+from utils import get_extend_dict, find_all_blocks, _convert_dict_to_tree, linearize
 
 
 def help():
@@ -44,7 +43,12 @@ def main():
             print('------> File *%s* will be generated from *%s*...' % (generated_file, input_file))
         
         extend_tree = get_extend_dict(input_file, BASE_FILE)
-        pprint(_convert_dict_to_tree(extend_tree))
+        #print(extend_tree)
+        rootnode = _convert_dict_to_tree(extend_tree)
+        print(rootnode.child.child.item_list[0].item_list)
+        #print(linearize(rootnode))
+        #print(len(rootnode.item_list))
+        #print(rootnode.child.item_list[0].collect_content())
         
         
 

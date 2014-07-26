@@ -7,10 +7,10 @@ class ContentMetaNode(object):
         self.end = end
     
     def __str__(self):
-        return self.content
+        return str(self.content)
     
     def __repr__(self):
-        return self.content
+        return repr(self.content)
 
 #b1 = metanode.BlockMetaNode('b1', 40, 500, 50, 400)
 #b2 = metanode.BlockMetaNode('b2', 51, 399, 100, 300)
@@ -31,10 +31,10 @@ class BlockMetaNode(object):
         self.item_list = []
     
     def __str__(self):
-        return self.name
+        return str(self.name)
     
     def __repr__(self):
-        return self.name
+        return repr(self.name)
     
     def __gt__(self, other):
         return self.start > other.start
@@ -73,6 +73,15 @@ class BlockMetaNode(object):
         others = [block for block in block_list if block not in children and block not in siblings]
         return (siblings, children, others)
 
+    def collect_content(self):
+        content = []
+        for item in sorted(self.item_list):
+            if isinstance(item, ContentMetaNode):
+                content.append(item.content)
+            elif isinstance(item, BlockMetaNode):
+                content.append(item.collect_content())
+        return ''.join(content)
+    
     def add_item(self, block_or_content):
         if isinstance(block_or_content, (BlockMetaNode, ContentMetaNode)):
             self.item_list.append(block_or_content)
@@ -98,7 +107,10 @@ class FileMetaNode(object):
         })
     
     def __str__(self):
-        return self.name
+        return str({'name': self.name,
+                'namespace': self.namespace,
+                'child': self.child
+        })
     
     def add_block(self, block):
         if isinstance(block, BlockMetaNode):
@@ -118,13 +130,16 @@ class FileMetaNode(object):
                 raise Exception('Must Add ContentMetaNode object')
             else:
                 self.item_list.append(content)
-    
+
+##################################################################################################    
     def _generate_block_tree(self, block_list, content):
         trace_parent_node = []
         first_blocknode = min(block_list)
         block_list.remove(first_blocknode)
         parent_node = first_blocknode
         trace_parent_node.append(parent_node)
+        
+#        print(self.name)
         for block in sorted(block_list):        
             if block in parent_node:
 #                print(block.name, 'in')
@@ -153,6 +168,10 @@ class FileMetaNode(object):
                                 'end': last_parent.content_end
                             }))
                         
+#                        print(self.name)
+#                        print(last_parent)
+#                        print(last_parent.content_start, last_parent.content_end)
+                        
                         last_parent_parent.add_item(last_parent)
                         
                         if last_parent.end != last_parent_parent.content_end:
@@ -177,7 +196,9 @@ class FileMetaNode(object):
                         trace_parent_node.append(parent_node)
                         break
         
-        return [block for block in block_list if first_blocknode.issibling(block)]
+        children = [first_blocknode]
+        children.extend([block for block in block_list if first_blocknode.issibling(block)])
+        return children
     
     def add_block_tree(self, blocknodes, content):
         self.namespace = [block.name for block in blocknodes]
@@ -185,10 +206,22 @@ class FileMetaNode(object):
         self.add_block_list(children)
     
     def get_all_blocks(self):
-        return [block for block in self.item_list if isinstance(block, BlockMetaNode)]
+        return [item for item in self.item_list if isinstance(item, BlockMetaNode)]
+    
+    def get_all_contents(self):
+        return [item for item in self.item_list if isinstance(item, ContentMetaNode)]
     
     def set_child(self, filenode):
         if isinstance(filenode, FileMetaNode):
             self.child = filenode
         else:
             raise Exception('Must Set a FileMetaNode as child')
+    def has_block(self, blockname):
+        return blockname in self.namespace
+    def search_block(self, blockname):
+        # search child list to find a block named blockname
+        child = self.child
+        while child:
+            if child.has_block(blockname):
+                return child
+            child = child.child
