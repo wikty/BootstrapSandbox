@@ -54,6 +54,17 @@ class BlockMetaNode(object):
             # next sibling
             return 2
     
+    def must_be_sibling(self, other):
+        if self.parent is None or other.parent is None:
+            raise Exception('BlockMetaNode object cannot use issibling() before it has a parent block')
+        if self.parent is not None and self.parent is self.other:
+            if self.end < other.start:
+                # previous siblings
+                return 1
+            elif other.end < self.start:
+                # next siblings
+                return 2
+    
     def isdescendant(self, other):
         return other in self
     
