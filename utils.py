@@ -152,10 +152,10 @@ def linearize(current_file, terminal_file):
                 content.append(item.content)
             if isinstance(item, BlockMetaNode):
                 if item.name not in accessed_blocks:
-                    accessed_blocks.append(item.name)
                     childnode = filenode.search_block_in_descendant(item.name)
                     if not childnode:
                         content.append(item.collect_content())
+                        accessed_blocks.append(item.name)
                     else:
                         content.append(childnode.collect_block_content(item.name))
                         accessed_blocks.extend(childnode.accessed_blocks)
