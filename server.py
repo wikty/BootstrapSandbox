@@ -1,4 +1,5 @@
 import os
+import datetime
 import urlparse
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
@@ -48,7 +49,10 @@ class AppServer(object):
         
         li_template = '<li><a href="%(filename)s">%(filename)s</a> - <span>%(mtime)s</span></li>'
         content_header = '<!doctype><html><head><title>Homepage</title></head><body><ul>'
-        content = ''.join([li_template % {'filename': file_list[k], 'mtime': k} for k in reversed(file_list.keys())])
+        content = ''.join([
+            li_template % {'filename': file_list[k], 'mtime': datetime.datetime.fromtimestamp(k).strftime('%Y-%M-%d %H:%M:%S')}
+            for k in reversed(file_list.keys())
+        ])
         content_footer = '</ul></body></html>'
         return ''.join([content_header, content, content_footer])
 
