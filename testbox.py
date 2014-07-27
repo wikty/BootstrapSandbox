@@ -45,9 +45,10 @@ def main():
         extend_tree = get_extend_dict(input_file, BASE_FILE)
         #print(extend_tree)
         rootnode = _convert_dict_to_tree(extend_tree)
-        print(rootnode.child.child.item_list[0].item_list)
-        #print(linearize(rootnode))
-        #print(len(rootnode.item_list))
+        #print(rootnode.child.child.item_list[0].item_list)
+        with open(generated_file, 'wb+') as f:
+            f.write(linearize(rootnode))
+        #print(sorted(rootnode.item_list))
         #print(rootnode.child.item_list[0].collect_content())
         
         

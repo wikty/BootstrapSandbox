@@ -91,6 +91,9 @@ class BlockMetaNode(object):
     def add_item_list(self, item_list):
         for item in item_list:
             self.add_item(item)
+    
+    def get_child_blocks(self):
+        return [item for item in self.item_list if isinstance(item, BlockMetaNode)]
 
 class FileMetaNode(object):
     def __init__(self, name, root=False):
@@ -99,6 +102,7 @@ class FileMetaNode(object):
         self.child = None
         self.root = root
         self.namespace = []
+        self.accessed_blocks = []
 
     def __repr__(self):
         return repr({'name': self.name,
@@ -140,7 +144,17 @@ class FileMetaNode(object):
         trace_parent_node.append(parent_node)
         
 #        print(self.name)
-        for block in sorted(block_list):        
+        
+        if not block_list:
+            if first_blocknode.content_start != first_blocknode.content_end:
+                first_blocknode.add_item(ContentMetaNode(**{
+                    'content': content[first_blocknode.content_start:first_blocknode.content_end],
+                    'start': first_blocknode.content_start,
+                    'end': first_blocknode.content_end
+                }))
+            return [first_blocknode]
+        
+        for block in sorted(block_list):
             if block in parent_node:
 #                print(block.name, 'in')
 #                print([b.name for b in trace_parent_node])
@@ -201,8 +215,8 @@ class FileMetaNode(object):
         return children
     
     def add_block_tree(self, blocknodes, content):
-        self.namespace = [block.name for block in blocknodes]
         children = self._generate_block_tree(blocknodes, content)
+        self.namespace = [block.name for block in children]
         self.add_block_list(children)
     
     def get_all_blocks(self):
@@ -216,12 +230,52 @@ class FileMetaNode(object):
             self.child = filenode
         else:
             raise Exception('Must Set a FileMetaNode as child')
+    
     def has_block(self, blockname):
+        if isinstance(blockname, BlockMetaNode):
+            blockname = blockname.name
         return blockname in self.namespace
-    def search_block(self, blockname):
+    
+    def get_block(self, blockname):
+        if self.has_block(blockname):
+            for block in self.get_all_blocks():
+                if block.name == blockname:
+                    return block
+    
+    def search_block_in_descendant(self, blockname):
         # search child list to find a block named blockname
+        if isinstance(blockname, BlockMetaNode):
+            blockname = blockname.name
         child = self.child
         while child:
             if child.has_block(blockname):
                 return child
             child = child.child
+    
+    def remove_block(self, blockname):
+        if isinstance(blockname, BlockMetaNode):
+            blockname = blockname.name
+        if blockname in self.namespace:
+#            print(blockname)
+#            print(self.namespace)
+#            print(self.item_list)
+            self.namespace.remove(blockname)
+            for block in self.get_all_blocks():
+                if block.name == blockname:
+                    self.item_list.remove(block)
+    
+    def collect_block_content(self, blockname):
+        if isinstance(blockname, BlockMetaNode):
+            blockname = blockname.name
+        self.accessed_blocks.append(blockname)
+        childnode = self.search_block_in_descendant(blockname)
+        if childnode:
+            return childnode.collect_block_content(blockname)
+        elif self.has_block(blockname):
+            child_blocks = sorted(self.get_block(blockname).get_child_blocks())
+            if child_blocks:
+                return ''.join([self.collect_block_content(block.name) for block in child_blocks])
+            else:
+                return self.get_block(blockname).collect_content()
+        else:
+            return ''
