@@ -45,7 +45,7 @@ def find_all_blocks(content, base=0):
     blocks = _recursive_match(regexp['blockdelimiter'], content, 'blockstart')
     return sorted(blocks, key=sorted_key)
 
-def get_extend_dict(current_file, terminal_file):
+def _get_extend_dict(current_file, terminal_file):
     current_file = os.path.abspath(current_file)
     terminal_file = os.path.abspath(terminal_file)
     extend_dict = collections.OrderedDict()
@@ -140,7 +140,14 @@ def _convert_dict_to_tree(extend_dict):
    
     return rootnode
 
-def linearize(rootnode):
+def linearize(current_file, terminal_file):
+    '''Collect And Calculate HTML from current_file to terminal_file'''
+    # work although, from current_file to terminal_file
+    # collect block information into a dict
+    extend_dict = _get_extend_dict(current_file, terminal_file)
+    # convert the blocks information dict to a tree
+    rootnode = _convert_dict_to_tree(extend_dict)
+    
     content = []
     filenode = rootnode
     accessed_blocks = []

@@ -3,7 +3,7 @@ import sys
 import string
 
 from config import *
-from utils import get_extend_dict, find_all_blocks, _convert_dict_to_tree, linearize
+from utils import linearize
 
 
 def help():
@@ -27,10 +27,6 @@ def main():
         print(helptext)
         return
     
-    with open(BASE_FILE, 'r') as f:
-        base_content = ''.join(f.readlines())
-        base_blocks = find_all_blocks(base_content)
-    
     for input_file in sys.argv[1:]:
         if not input_file.startswith(WORKING_DIR):
             input_file = os.path.join(WORKING_DIR, input_file)
@@ -42,14 +38,9 @@ def main():
             print('')
             print('------> File *%s* will be generated from *%s*...' % (generated_file, input_file))
         
-        extend_tree = get_extend_dict(input_file, BASE_FILE)
-        #print(extend_tree)
-        rootnode = _convert_dict_to_tree(extend_tree)
-        #print(rootnode.child.child.item_list[0].item_list)
+        content = linearize(input_file, BASE_FILE)
         with open(generated_file, 'wb+') as f:
-            f.write(linearize(rootnode))
-        #print(sorted(rootnode.item_list))
-        #print(rootnode.child.item_list[0].collect_content())
+            f.write(content)
         
         
 
