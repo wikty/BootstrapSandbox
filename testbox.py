@@ -4,6 +4,7 @@ import string
 
 from config import *
 from utils import linearize
+from server import page_server
 
 
 def help():
@@ -34,14 +35,16 @@ def main():
             print('')
             print('------> File *%s* does not exist!!!' % input_file)
         else:
-            generated_file = os.path.join(os.path.dirname(input_file), os.path.basename(input_file)+'.gen.html')
+            generated_file = os.path.join(os.path.dirname(input_file), os.path.basename(input_file)+SUFFIX_NAME)
             print('')
             print('------> File *%s* will be generated from *%s*...' % (generated_file, input_file))
+            print('')
         
         content = linearize(input_file, BASE_FILE)
         with open(generated_file, 'wb+') as f:
             f.write(content)
         
+        page_server.run()
         
 
 if __name__ == '__main__':
