@@ -48,7 +48,7 @@ class AppServer(object):
         os.path.walk(self.working_dir, collecter, file_list)
         
         li_template = '<li><a href="%(filename)s">%(filename)s</a> - <span>%(mtime)s</span></li>'
-        content_header = '<!doctype><html><head><title>Homepage</title></head><body><ul>'
+        content_header = '<!doctype><html><head><title>BootstrapTestBox</title></head><body><ul>'
         content = ''.join([
             li_template % {'filename': file_list[k], 'mtime': datetime.datetime.fromtimestamp(k).strftime('%Y-%M-%d %H:%M:%S')}
             for k in reversed(file_list.keys())
