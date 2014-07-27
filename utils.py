@@ -129,11 +129,6 @@ def _convert_dict_to_tree(extend_dict):
         filenode = FileMetaNode(file_data[0])
         blocknodes = [BlockMetaNode(**block) for block in file_data[1]['blocks']]
         filenode.add_block_tree(blocknodes, file_data[1]['content'])
-#        if filenode.name == '/home/wikty/Projects/bootstrapbox/examples/page_header.html':
-#            print(filenode.item_list[0].start)
-#            print(filenode.item_list[0].content_start)
-#            print(filenode.item_list[0].content_end)
-#            print(filenode.item_list[0].end)
         if previous_filenode:
             previous_filenode.set_child(filenode)
         previous_filenode = filenode
@@ -152,46 +147,17 @@ def linearize(current_file, terminal_file):
     filenode = rootnode
     accessed_blocks = []
     while filenode:
-#        print(filenode.namespace)
-#        if filenode.name == '/home/wikty/Projects/bootstrapbox/examples/page_header.html':
-#            print(filenode.name)
-#            print(content[-1])
-#            print(filenode.name)
-#            print(accessed_blocks)
-#        print(filenode.name)
-#        print(accessed_blocks)
         for item in sorted(filenode.item_list):
-            #print(filenode.name)
             if isinstance(item, ContentMetaNode):
-                #print('content')
-                
-                #content.append(filenode.name)
-                
                 content.append(item.content)
             if isinstance(item, BlockMetaNode):
                 if item.name not in accessed_blocks:
                     accessed_blocks.append(item.name)
-                    #print('blockname: ' + item.name)
                     childnode = filenode.search_block_in_descendant(item.name)
                     if not childnode:
-                        #print(item.collect_content())
-                        
-                        #content.append(filenode.name)
-                        
                         content.append(item.collect_content())
                     else:
-                        #print(childnode.name)
-                        #childnode.namespace.remove(item.name)
-                        #childnode.remove_block(item.name)
-                        
-                        #content.append(filenode.name)
-                        
                         content.append(childnode.collect_block_content(item.name))
                         accessed_blocks.extend(childnode.accessed_blocks)
-#        if filenode.name == '/home/wikty/Projects/bootstrapbox/examples/page_header.html':
-#            print(filenode.name)
-#            print(content[-1])
-#            print(filenode.name)
-#            print(accessed_blocks)
         filenode = filenode.child
     return ''.join(content)

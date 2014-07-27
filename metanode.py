@@ -12,12 +12,6 @@ class ContentMetaNode(object):
     def __repr__(self):
         return repr(self.content)
 
-#b1 = metanode.BlockMetaNode('b1', 40, 500, 50, 400)
-#b2 = metanode.BlockMetaNode('b2', 51, 399, 100, 300)
-#b3 = metanode.BlockMetaNode('b3', 0, 39, 10, 20)
-#b4 = metanode.BlockMetaNode('b4', 600, 1000, 620, 900)
-#c = metanode.ContentMetaNode('c1', 150, 200)
-
 @functools.total_ordering
 class BlockMetaNode(object):
     def __init__(self, block, start, end, content_start, content_end):
@@ -134,17 +128,13 @@ class FileMetaNode(object):
                 raise Exception('Must Add ContentMetaNode object')
             else:
                 self.item_list.append(content)
-
-##################################################################################################    
+  
     def _generate_block_tree(self, block_list, content):
         trace_parent_node = []
         first_blocknode = min(block_list)
         block_list.remove(first_blocknode)
         parent_node = first_blocknode
         trace_parent_node.append(parent_node)
-        
-#        print(self.name)
-        
         if not block_list:
             if first_blocknode.content_start != first_blocknode.content_end:
                 first_blocknode.add_item(ContentMetaNode(**{
@@ -156,8 +146,6 @@ class FileMetaNode(object):
         
         for block in sorted(block_list):
             if block in parent_node:
-#                print(block.name, 'in')
-#                print([b.name for b in trace_parent_node])
                 if parent_node.content_start != block.start:
                     parent_node.add_item(ContentMetaNode(**{
                         'content': content[parent_node.content_start:block.start],
@@ -169,8 +157,6 @@ class FileMetaNode(object):
                 parent_node = block
                 trace_parent_node.append(parent_node)
             else:
-#                print(block.name, ' not in')
-#                print([b.name for b in trace_parent_node])
                 while True:
                     last_parent = trace_parent_node.pop()
                     last_parent_parent = trace_parent_node[-1]
@@ -181,10 +167,6 @@ class FileMetaNode(object):
                                 'start': last_parent.content_start,
                                 'end': last_parent.content_end
                             }))
-                        
-#                        print(self.name)
-#                        print(last_parent)
-#                        print(last_parent.content_start, last_parent.content_end)
                         
                         last_parent_parent.add_item(last_parent)
                         
@@ -256,9 +238,6 @@ class FileMetaNode(object):
         if isinstance(blockname, BlockMetaNode):
             blockname = blockname.name
         if blockname in self.namespace:
-#            print(blockname)
-#            print(self.namespace)
-#            print(self.item_list)
             self.namespace.remove(blockname)
             for block in self.get_all_blocks():
                 if block.name == blockname:
