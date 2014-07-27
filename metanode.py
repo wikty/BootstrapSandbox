@@ -224,12 +224,27 @@ class FileMetaNode(object):
                 parent_node.add_item(block)
                 parent_node = block
                 trace_parent_node.append(parent_node)
+                if block is last_blocknode:
+                    if block.content_start != block.content_end:
+                        block.add_item(ContentMetaNode(**{
+                            'content': content[block.content_start:block.content_end],
+                            'start': block.content_start,
+                            'end': block.content_end
+                        }))
+                    last_block = trace_parent_node.pop()
+                    last_parent = trace_parent_node.pop()
+                    while last_parent:
+                        if last_block.end != last_parent.content_end:
+                            last_parent.add_item(ContentMetaNode(**{
+                                'content': content[last_block.end:last_parent.content_end],
+                                'start': last_block.end,
+                                'end': last_parent.content_end
+                            }))
+                        try:
+                            last_parent = trace_parent_node.pop()
+                        except Exception as e:
+                            last_parent = None    
             else:
-#                print(self.name) 
-#                print(block.name)
-#                print(block.content_start)
-#                print(block.content_end)
-#                print(trace_parent_node)
                 while True:
                     last_parent = trace_parent_node.pop()
                     last_parent_parent = trace_parent_node[-1]
@@ -272,9 +287,20 @@ class FileMetaNode(object):
     def _generate_block_tree2(self, block_list, content):
         
         def treeize(root_blocknode, block_list, content):
+            if not block_list:
+                if root_blocknode.content_start != root_blocknode.content_end:
+                    root_blocknode.add_item(ContentMetaNode(**{
+                        'content': content[root_blocknode.content_start:root_blocknode.content_end],
+                        'start': root_blocknode.content_start,
+                        'end': root_blocknode.content_end
+                    }))
+                return
+            
             for i, block in zip(range(0, len(block_list)), sorted(block_list)):
                 if block not in root_blocknode:
                    return
+                elif block is root_blocknode:
+                    continue
                 else:
                     # add *after-block-start-delimiter-content*
                     if root_blocknode.content_start != block.start:
@@ -286,10 +312,10 @@ class FileMetaNode(object):
                     # add block
                     root_blocknode.add_item(block)
                     # recursive match
-                    treeize(block, sorted(block_list)[i+1:], content)
+                    treeize(block, block_list[i:], content)
                     # between in sub-blocks
                     previous_sibling = block
-                    next_sibling, j = block.get_next_sibling(sorted(block_list)[i+1:], root_blocknode)
+                    next_sibling, j = block.get_next_sibling(block_list[i:], root_blocknode)
                     while next_sibling:
                         if previous_sibling.end != next_sibling.start:
                             root_blocknode.add_item(ContentMetaNode(**{
@@ -299,9 +325,9 @@ class FileMetaNode(object):
                             }))
                         # add block
                         root_blocknode.add_item(next_sibling)
-                        treeize(next_sibling, sorted(block_list)[i+j+1:], content)
+                        treeize(next_sibling, block_list[i+j:], content)
                         previous_sibling = next_sibling
-                        next_sibling, j = block.get_next_sibling(sorted(block_list)[i+1:], root_blocknode)
+                        next_sibling, j = previous_sibling.get_next_sibling(block_list[i:], root_blocknode)
                     else:
                         if previous_sibling.end != root_blocknode.content_end:
                             root_blocknode.add_item(ContentMetaNode(**{
@@ -311,20 +337,16 @@ class FileMetaNode(object):
                             }))
         
         first_blocknode = min(block_list)
-        children = [first_blocknode]
-        children.extend([block for block in sorted(block_list) if first_blocknode.issibling(block)])
-        for child in children:
-            treeize(child, block_list, content)
-        return children
+        toplevel_blocks = [(0, first_blocknode), ]
+        toplevel_blocks.extend([(i, block) for i, block in zip(range(0, len(block_list)), sorted(block_list)) if first_blocknode.issibling(block)])
+        for i, toplevel_block in toplevel_blocks:
+            treeize(toplevel_block, block_list[i:], content)
+        return [block for i, block in toplevel_blocks]
     
     def add_block_tree(self, blocknodes, content):
         # must before _generate_block_tree, because it remove blocknodes first element
-#        if self.name.endswith('form.html'):
-#            print(content)
         self.namespace = [block.name for block in blocknodes if isinstance(block, BlockMetaNode)]
         children = self._generate_block_tree(blocknodes, content)
-#        if self.name.endswith('form.html'):
-#            print(children[0].item_list[0].content)
         self.add_block_list(children)
     
     def get_all_blocks(self):
@@ -380,19 +402,10 @@ class FileMetaNode(object):
         if childnode:
             return childnode.collect_block_content(blockname)
         elif self.has_block(blockname):
-            
-#            print(self.name)
-#            print(blockname)
-            
             child_blocks = sorted(self.get_block(blockname).get_child_blocks())
             if child_blocks:
-#                print('child')
                 return ''.join([self.collect_block_content(block.name) for block in child_blocks])
             else:
-#                print('no child')
-#                print(self.get_block(blockname).content_start)
-#                print(self.get_block(blockname).content_end)
-#                print(self.get_block(blockname).collect_content())
                 return self.get_block(blockname).collect_content()
         else:
             return ''
