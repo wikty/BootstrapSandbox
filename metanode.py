@@ -5,6 +5,7 @@ class ContentMetaNode(object):
         self.content = content
         self.start = start
         self.end = end
+        self.parent = None
     
     def __str__(self):
         return str(self.content)
@@ -23,6 +24,7 @@ class BlockMetaNode(object):
         self.content_start = content_start
         self.content_end = content_end
         self.item_list = []
+        self.parent = None
     
     def __str__(self):
         return str(self.name)
@@ -43,11 +45,13 @@ class BlockMetaNode(object):
             raise Exception('Only BlockMetaNode and ContentMetaNode Can Operator In With BlockMetaNode')
     
     def issibling(self, other):
+        # return None, does not mean self and other are not siblings
+        # return 1 or 2 means self and other must be siblings
         if self.end < other.start:
-            # previous siblings
+            # previous sibling
             return 1
-        elif self.start > other.end:
-            # next siblings
+        elif other.end < self.start:
+            # next sibling
             return 2
     
     def isdescendant(self, other):
@@ -57,7 +61,7 @@ class BlockMetaNode(object):
         siblings = []
         children = []
         for block in block_list:
-            if block == self:
+            if block is self:
                 continue
             if self.issibling(block):
                 siblings.append(block)
@@ -66,7 +70,20 @@ class BlockMetaNode(object):
         children = [child for child in children if not [True for c in children if child in c]]
         others = [block for block in block_list if block not in children and block not in siblings]
         return (siblings, children, others)
-
+    
+    def get_next_sibling(self, block_list, parent_block):
+        if (not block_list) or \
+                (not parent_block) or \
+                (parent_block not in block_list) or \
+                (self not in block_list):
+            return None
+        else:
+            child_blocks = [(block, i) for block, i in zip(block_list, len(block_list)) if block in parent_block]
+            child_blocks = [(block, i) for block, i in child_blocks if not [True for c, j in child_blocks if block in c]]
+            for block, i in child_blocks:
+                if self.end < block.start:
+                    return (block, i)
+    
     def collect_content(self):
         content = []
         for item in sorted(self.item_list):
@@ -78,6 +95,7 @@ class BlockMetaNode(object):
     
     def add_item(self, block_or_content):
         if isinstance(block_or_content, (BlockMetaNode, ContentMetaNode)):
+            block_or_content.parent = self
             self.item_list.append(block_or_content)
         else:
             raise Exception('Must Add BlockMetaNode or ContentMetaNode object')
@@ -88,6 +106,17 @@ class BlockMetaNode(object):
     
     def get_child_blocks(self):
         return [item for item in self.item_list if isinstance(item, BlockMetaNode)]
+    
+    def get_descendant_block(self, blockname):
+        # get descendant or children block by name
+        child_blocks = self.get_child_blocks()
+        if not child_blocks:
+            return
+        for block in child_blocks:
+            if block.name == blockname:
+                return block
+            else:
+                return block.get_descendant_block(blockname)
 
 class FileMetaNode(object):
     def __init__(self, name, root=False):
@@ -128,13 +157,41 @@ class FileMetaNode(object):
                 raise Exception('Must Add ContentMetaNode object')
             else:
                 self.item_list.append(content)
-  
+      
     def _generate_block_tree(self, block_list, content):
-        trace_parent_node = []
+        # Block tree like this:
+        #       block1             block2         # block1 and block2 are siblings
+        #    /     |    \            |   \ 
+        #   /      |     \           |    \
+        # block3 content block4    block5 content
+        #  |              |          |
+        # content        content   content
+        # 
+        # After sort block_list(by block.start), there are some regulars:
+        # 1. parent node is before children nodes
+        # 2. sibling node is after previous-siblings' all children nodes
+        # 3. leaf node must be content node
+        # 4. content node all possible positions:
+        #    {% block %}
+        #       after-block-start-delimiter-content
+        #       {% block %}content, recursive match{% endblock %}
+        #       between in sub-blocks, ...
+        #       {% block %}content, recursive match{% endblock %}
+        #       before-block-end-delimiter-content
+        #    {% endblock %}
+        # 
+        # Actually, this is a tree inorder-traversal's inverse process       
+
         first_blocknode = min(block_list)
-        block_list.remove(first_blocknode)
+        last_blocknode = max(block_list)
+        
+        block_list.remove(first_blocknode)  #
+        
+        # use a list to record history parent nodes
+        trace_parent_node = []
         parent_node = first_blocknode
         trace_parent_node.append(parent_node)
+        
         if not block_list:
             if first_blocknode.content_start != first_blocknode.content_end:
                 first_blocknode.add_item(ContentMetaNode(**{
@@ -157,6 +214,11 @@ class FileMetaNode(object):
                 parent_node = block
                 trace_parent_node.append(parent_node)
             else:
+#                print(self.name) 
+#                print(block.name)
+#                print(block.content_start)
+#                print(block.content_end)
+#                print(trace_parent_node)
                 while True:
                     last_parent = trace_parent_node.pop()
                     last_parent_parent = trace_parent_node[-1]
@@ -197,8 +259,13 @@ class FileMetaNode(object):
         return children
     
     def add_block_tree(self, blocknodes, content):
+        # must before _generate_block_tree, because it remove blocknodes first element
+#        if self.name.endswith('form.html'):
+#            print(content)
+        self.namespace = [block.name for block in blocknodes if isinstance(block, BlockMetaNode)]
         children = self._generate_block_tree(blocknodes, content)
-        self.namespace = [block.name for block in children]
+#        if self.name.endswith('form.html'):
+#            print(children[0].item_list[0].content)
         self.add_block_list(children)
     
     def get_all_blocks(self):
@@ -223,6 +290,9 @@ class FileMetaNode(object):
             for block in self.get_all_blocks():
                 if block.name == blockname:
                     return block
+                result = block.get_descendant_block(blockname)
+                if result:
+                    return result
     
     def search_block_in_descendant(self, blockname):
         # search child list to find a block named blockname
@@ -234,14 +304,14 @@ class FileMetaNode(object):
                 return child
             child = child.child
     
-    def remove_block(self, blockname):
-        if isinstance(blockname, BlockMetaNode):
-            blockname = blockname.name
-        if blockname in self.namespace:
-            self.namespace.remove(blockname)
-            for block in self.get_all_blocks():
-                if block.name == blockname:
-                    self.item_list.remove(block)
+#    def remove_block(self, blockname):
+#        if isinstance(blockname, BlockMetaNode):
+#            blockname = blockname.name
+#        if blockname in self.namespace:
+#            self.namespace.remove(blockname)
+#            for block in self.get_all_blocks():
+#                if block.name == blockname:
+#                    self.item_list.remove(block)
     
     def collect_block_content(self, blockname):
         if isinstance(blockname, BlockMetaNode):
@@ -251,10 +321,19 @@ class FileMetaNode(object):
         if childnode:
             return childnode.collect_block_content(blockname)
         elif self.has_block(blockname):
+            
+#            print(self.name)
+#            print(blockname)
+            
             child_blocks = sorted(self.get_block(blockname).get_child_blocks())
             if child_blocks:
+#                print('child')
                 return ''.join([self.collect_block_content(block.name) for block in child_blocks])
             else:
+#                print('no child')
+#                print(self.get_block(blockname).content_start)
+#                print(self.get_block(blockname).content_end)
+#                print(self.get_block(blockname).collect_content())
                 return self.get_block(blockname).collect_content()
         else:
             return ''
