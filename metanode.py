@@ -269,6 +269,54 @@ class FileMetaNode(object):
         children.extend([block for block in block_list if first_blocknode.issibling(block)])
         return children
     
+    def _generate_block_tree2(self, block_list, content):
+        
+        def treeize(root_blocknode, block_list, content):
+            for i, block in zip(range(0, len(block_list)), sorted(block_list)):
+                if block not in root_blocknode:
+                   return
+                else:
+                    # add *after-block-start-delimiter-content*
+                    if root_blocknode.content_start != block.start:
+                        root_blocknode.add_item(ContentMetaNode(**{
+                            'content': content[root_blocknode.content_start:block.start],
+                            'start': root_blocknode.content_start,
+                            'end': block.start
+                        }))
+                    # add block
+                    root_blocknode.add_item(block)
+                    # recursive match
+                    treeize(block, sorted(block_list)[i+1:], content)
+                    # between in sub-blocks
+                    previous_sibling = block
+                    next_sibling, j = block.get_next_sibling(sorted(block_list)[i+1:], root_blocknode)
+                    while next_sibling:
+                        if previous_sibling.end != next_sibling.start:
+                            root_blocknode.add_item(ContentMetaNode(**{
+                                'content': content[previous_sibling.end:next_sibling.start],
+                                'start': previous_sibling.end,
+                                'end': next_sibling.start
+                            }))
+                        # add block
+                        root_blocknode.add_item(next_sibling)
+                        treeize(next_sibling, sorted(block_list)[i+j+1:], content)
+                        previous_sibling = next_sibling
+                        next_sibling, j = block.get_next_sibling(sorted(block_list)[i+1:], root_blocknode)
+                    else:
+                        if previous_sibling.end != root_blocknode.content_end:
+                            root_blocknode.add_item(ContentMetaNode(**{
+                                'content': content[previous_sibling.end:root_blocknode.content_end],
+                                'start': previous_sibling.end,
+                                'end': root_blocknode.content_end
+                            }))
+        
+        first_blocknode = min(block_list)
+        children = [first_blocknode]
+        children.extend([block for block in sorted(block_list) if first_blocknode.issibling(block)])
+        for child in children:
+            treeize(child, block_list, content)
+        return children
+    
     def add_block_tree(self, blocknodes, content):
         # must before _generate_block_tree, because it remove blocknodes first element
 #        if self.name.endswith('form.html'):
